@@ -7,8 +7,19 @@ import { useSubmissions } from "@/context/SubmissionContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Play, Lightbulb, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, Send, Lightbulb, ChevronDown, ChevronUp, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { executeCode, getOutput, runAgainstTestCases } from "@/services/judge0";
+
+interface TestCaseResult {
+  testCaseId: string;
+  input: string;
+  expected: string;
+  actual: string;
+  passed: boolean;
+  time: string;
+  memory: number;
+}
 
 const QuestionDetail = () => {
   const { id } = useParams();
@@ -17,7 +28,9 @@ const QuestionDetail = () => {
   const { addSubmission, getQuestionSubmissions } = useSubmissions();
   const [code, setCode] = useState(question?.starterCode || "");
   const [showHints, setShowHints] = useState(false);
-  const [result, setResult] = useState<null | { status: "accepted" | "wrong_answer" | "error"; output: string }>(null);
+  const [runOutput, setRunOutput] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<TestCaseResult[] | null>(null);
+  const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   if (!question) return <Navigate to="/questions" />;
@@ -25,36 +38,53 @@ const QuestionDetail = () => {
 
   const pastSubmissions = getQuestionSubmissions(user.id, question.id);
 
-  const handleSubmit = () => {
+  const handleRun = async () => {
+    setRunning(true);
+    setRunOutput(null);
+    setTestResults(null);
+    try {
+      const result = await executeCode(code);
+      setRunOutput(getOutput(result));
+    } catch (error) {
+      setRunOutput(error instanceof Error ? error.message : "Execution failed");
+      toast.error("Code execution failed");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     setSubmitting(true);
-    // Mock evaluation
-    setTimeout(() => {
-      const isAccepted = Math.random() > 0.3; // 70% chance of acceptance for demo
-      const mockResult = {
-        status: isAccepted ? "accepted" as const : "wrong_answer" as const,
-        output: isAccepted
-          ? question.testCases[0].expectedOutput
-          : "Unexpected output",
-      };
-      setResult(mockResult);
+    setRunOutput(null);
+    setTestResults(null);
+    try {
+      const { results, allPassed } = await runAgainstTestCases(code, question.testCases);
+      setTestResults(results);
+
+      const avgTime = (results.reduce((s, r) => s + parseFloat(r.time), 0) / results.length).toFixed(2);
+      const avgMemory = (results.reduce((s, r) => s + r.memory, 0) / results.length / 1024).toFixed(1);
 
       addSubmission({
         userId: user.id,
         questionId: question.id,
         submittedCode: code,
-        output: mockResult.output,
-        status: mockResult.status,
-        executionTime: `${(Math.random() * 100 + 10).toFixed(0)}ms`,
-        memoryUsed: `${(Math.random() * 5 + 1).toFixed(1)}MB`,
+        output: results.map((r) => r.actual).join("\n"),
+        status: allPassed ? "accepted" : "wrong_answer",
+        executionTime: `${avgTime}s`,
+        memoryUsed: `${avgMemory}MB`,
       });
 
-      if (isAccepted) {
+      if (allPassed) {
         toast.success("All test cases passed!");
       } else {
-        toast.error("Some test cases failed");
+        const passed = results.filter((r) => r.passed).length;
+        toast.error(`${passed}/${results.length} test cases passed`);
       }
+    } catch (error) {
+      toast.error("Submission failed");
+    } finally {
       setSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -82,12 +112,25 @@ const QuestionDetail = () => {
           <div className="rounded-lg border border-border bg-secondary/50 p-4">
             <h3 className="font-mono text-xs text-muted-foreground mb-3 uppercase tracking-wider">Test Cases</h3>
             <div className="space-y-3">
-              {question.testCases.map((tc, i) => (
-                <div key={tc.id} className="text-sm font-mono">
-                  <div className="text-muted-foreground">Input: <span className="text-foreground">{tc.input || "(none)"}</span></div>
-                  <div className="text-muted-foreground">Expected: <span className="text-neon-green">{tc.expectedOutput}</span></div>
-                </div>
-              ))}
+              {question.testCases.map((tc) => {
+                const result = testResults?.find((r) => r.testCaseId === tc.id);
+                return (
+                  <div key={tc.id} className="text-sm font-mono">
+                    <div className="flex items-center gap-2">
+                      {result && (
+                        result.passed
+                          ? <CheckCircle className="w-4 h-4 text-neon-green" />
+                          : <XCircle className="w-4 h-4 text-neon-red" />
+                      )}
+                      <span className="text-muted-foreground">Input: <span className="text-foreground">{tc.input || "(none)"}</span></span>
+                    </div>
+                    <div className="text-muted-foreground ml-6">Expected: <span className="text-neon-green">{tc.expectedOutput}</span></div>
+                    {result && !result.passed && (
+                      <div className="text-muted-foreground ml-6">Got: <span className="text-neon-red">{result.actual}</span></div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -145,28 +188,52 @@ const QuestionDetail = () => {
             />
           </div>
 
-          <Button onClick={handleSubmit} disabled={submitting} className="w-full">
-            <Play className="w-4 h-4 mr-2" />
-            {submitting ? "Evaluating..." : "Submit Solution"}
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={handleRun} disabled={running || submitting} className="flex-1">
+              {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+              {running ? "Running..." : "Run Code"}
+            </Button>
+            <Button onClick={handleSubmit} disabled={running || submitting} className="flex-1">
+              {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              {submitting ? "Evaluating..." : "Submit Solution"}
+            </Button>
+          </div>
 
-          {/* Result */}
-          {result && (
+          {/* Run Output */}
+          {runOutput !== null && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-lg border border-border bg-secondary/50 p-4"
+            >
+              <h3 className="font-mono text-xs text-muted-foreground mb-2 uppercase tracking-wider">Output</h3>
+              <pre className="text-sm font-mono text-foreground whitespace-pre-wrap">{runOutput}</pre>
+            </motion.div>
+          )}
+
+          {/* Test Results Summary */}
+          {testResults && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className={`rounded-lg border p-4 ${
-                result.status === "accepted"
+                testResults.every((r) => r.passed)
                   ? "border-neon-green/30 bg-neon-green/5"
                   : "border-neon-red/30 bg-neon-red/5"
               }`}
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className={`font-mono font-bold ${result.status === "accepted" ? "text-neon-green" : "text-neon-red"}`}>
-                  {result.status === "accepted" ? "✓ Accepted" : "✗ Wrong Answer"}
+                <span className={`font-mono font-bold ${testResults.every((r) => r.passed) ? "text-neon-green" : "text-neon-red"}`}>
+                  {testResults.every((r) => r.passed)
+                    ? "✓ All Test Cases Passed"
+                    : `✗ ${testResults.filter((r) => r.passed).length}/${testResults.length} Passed`}
                 </span>
               </div>
-              <pre className="text-sm font-mono text-muted-foreground">{result.output}</pre>
+              <div className="text-xs font-mono text-muted-foreground">
+                Avg time: {(testResults.reduce((s, r) => s + parseFloat(r.time), 0) / testResults.length).toFixed(3)}s
+                {" · "}
+                Avg memory: {(testResults.reduce((s, r) => s + r.memory, 0) / testResults.length / 1024).toFixed(1)}KB
+              </div>
             </motion.div>
           )}
         </div>
