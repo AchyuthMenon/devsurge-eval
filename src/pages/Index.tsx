@@ -28,7 +28,7 @@ const Index = () => {
         </div>
 
         <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">
-          <span className="gradient-text">SkillForge</span>
+          <span className="gradient-text">Epsilon</span>
         </h1>
         <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
           Sharpen your programming skills with real-world challenges. Debug, predict, complete, and conquer.

@@ -16,7 +16,7 @@ const Navbar = () => {
           <div className="w-8 h-8 rounded-md bg-primary/20 neon-border flex items-center justify-center">
             <Terminal className="w-4 h-4 text-primary" />
           </div>
-          <span className="font-display font-bold text-lg gradient-text">SkillForge</span>
+          <span className="font-display font-bold text-lg gradient-text">Epsilon</span>
         </Link>
 
         <div className="flex items-center gap-1">
