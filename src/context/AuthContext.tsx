@@ -9,8 +9,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
-  signup: (name: string, email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -33,32 +33,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const signup = (name: string, email: string, _password: string) => {
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      name,
-      email,
-      createdAt: new Date().toISOString(),
-    };
-    localStorage.setItem("sdep_user", JSON.stringify(newUser));
-    // Store in users list
-    const users = JSON.parse(localStorage.getItem("sdep_users") || "[]");
-    users.push({ ...newUser, password: _password });
-    localStorage.setItem("sdep_users", JSON.stringify(users));
-    setUser(newUser);
-    return true;
+  const signup = async (name: string, email: string, password: string) => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      if (res.ok) {
+        const newUser = await res.json();
+        localStorage.setItem("sdep_user", JSON.stringify(newUser));
+        setUser(newUser);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
-  const login = (email: string, password: string) => {
-    const users = JSON.parse(localStorage.getItem("sdep_users") || "[]");
-    const found = users.find((u: any) => u.email === email && u.password === password);
-    if (found) {
-      const { password: _, ...userData } = found;
-      localStorage.setItem("sdep_user", JSON.stringify(userData));
-      setUser(userData);
-      return true;
+  const login = async (email: string, password: string) => {
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) {
+        const userData = await res.json();
+        localStorage.setItem("sdep_user", JSON.stringify(userData));
+        setUser(userData);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
-    return false;
   };
 
   const logout = () => {

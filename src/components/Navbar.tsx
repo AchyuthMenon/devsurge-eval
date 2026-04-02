@@ -12,11 +12,22 @@ const Navbar = () => {
   return (
     <nav className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md bg-primary/20 neon-border flex items-center justify-center">
-            <Terminal className="w-4 h-4 text-primary" />
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="w-8 h-8 rounded bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:neon-border group-hover:bg-primary/20">
+            {/* Custom stylized 'E' logo */}
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5 text-primary opacity-90 transition-transform duration-300 group-hover:scale-110"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="square"
+              strokeLinejoin="miter">
+              <path d="M19 5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19H19" />
+              <path d="M5 12H15" />
+            </svg>
           </div>
-          <span className="font-display font-bold text-lg gradient-text">Epsilon</span>
+          <span className="font-display font-bold text-lg text-foreground tracking-tight group-hover:gradient-text transition-all duration-300">Epsilon</span>
         </Link>
 
         <div className="flex items-center gap-1">

@@ -1,64 +1,7 @@
-export type QuestionType = "debugging" | "dsa" | "output-prediction" | "code-completion" | "edge-case";
-export type Difficulty = "easy" | "medium" | "hard";
-export type Language = "javascript" | "python" | "java";
+const db = require('./db');
+const crypto = require('crypto');
 
-export interface TestCase {
-  id: string;
-  input: string;
-  expectedOutput: string;
-}
-
-export interface Question {
-  id: string;
-  title: string;
-  description: string;
-  type: QuestionType;
-  difficulty: Difficulty;
-  starterCode: string;
-  starterCodePython?: string | null;
-  starterCodeJava?: string | null;
-  functionName?: string;
-  testCases: TestCase[];
-  hints?: string[];
-}
-
-export const languageLabels: Record<Language, string> = {
-  javascript: "JavaScript",
-  python: "Python",
-  java: "Java",
-};
-
-export const monacoLanguageMap: Record<Language, string> = {
-  javascript: "javascript",
-  python: "python",
-  java: "java",
-};
-
-/** Returns which languages a question supports based on whether it has starter code for that language */
-export function getSupportedLanguages(question: Question): Language[] {
-  const langs: Language[] = ["javascript"];
-  if (question.starterCodePython) langs.push("python");
-  if (question.starterCodeJava) langs.push("java");
-  return langs;
-}
-
-export const questionTypeLabels: Record<QuestionType, string> = {
-  debugging: "Debugging",
-  dsa: "DSA",
-  "output-prediction": "Output Prediction",
-  "code-completion": "Code Completion",
-  "edge-case": "Edge Case Detection",
-};
-
-export const questionTypeColors: Record<QuestionType, string> = {
-  debugging: "neon-red",
-  dsa: "neon-blue",
-  "output-prediction": "neon-orange",
-  "code-completion": "neon-green",
-  "edge-case": "neon-purple",
-};
-
-export const questions: Question[] = [
+const questions = [
   {
     id: "1",
     title: "Fix the Array Reversal",
@@ -66,6 +9,8 @@ export const questions: Question[] = [
     type: "debugging",
     difficulty: "easy",
     starterCode: `function reverseArray(arr) {\n  for (let i = 0; i < arr.length; i++) {\n    let temp = arr[i];\n    arr[i] = arr[arr.length - i];\n    arr[arr.length - i] = temp;\n  }\n  return arr;\n}`,
+    starterCodePython: `def reverse_array(arr):\n    for i in range(len(arr)):\n        temp = arr[i]\n        arr[i] = arr[len(arr) - i]\n        arr[len(arr) - i] = temp\n    return arr`,
+    starterCodeJava: `class Solution {\n    public static int[] reverseArray(int[] arr) {\n        for (int i = 0; i < arr.length; i++) {\n            int temp = arr[i];\n            arr[i] = arr[arr.length - i];\n            arr[arr.length - i] = temp;\n        }\n        return arr;\n    }\n}`,
     functionName: "reverseArray",
     testCases: [
       { id: "1a", input: "[1, 2, 3, 4, 5]", expectedOutput: "[5, 4, 3, 2, 1]" },
@@ -80,6 +25,8 @@ export const questions: Question[] = [
     type: "dsa",
     difficulty: "medium",
     starterCode: `function binarySearch(arr, target) {\n  // Your implementation here\n  \n}`,
+    starterCodePython: `def binary_search(arr, target):\n    # Your implementation here\n    pass`,
+    starterCodeJava: `class Solution {\n    public static int binarySearch(int[] arr, int target) {\n        // Your implementation here\n        return -1;\n    }\n}`,
     functionName: "binarySearch",
     testCases: [
       { id: "2a", input: "[1, 3, 5, 7, 9], 5", expectedOutput: "2" },
@@ -94,6 +41,8 @@ export const questions: Question[] = [
     type: "output-prediction",
     difficulty: "medium",
     starterCode: `for (var i = 0; i < 3; i++) {\n  setTimeout(function() {\n    console.log(i);\n  }, 100);\n}\n// What will be printed?\n// Write your answer as the output:`,
+    starterCodePython: null,
+    starterCodeJava: null,
     testCases: [
       { id: "3a", input: "", expectedOutput: "3\n3\n3" },
     ],
@@ -106,6 +55,8 @@ export const questions: Question[] = [
     type: "code-completion",
     difficulty: "easy",
     starterCode: `class Node {\n  constructor(value) {\n    this.value = value;\n    this.next = null;\n  }\n}\n\nclass LinkedList {\n  constructor() {\n    this.head = null;\n  }\n\n  insertAtEnd(value) {\n    // Complete this method\n    \n  }\n}`,
+    starterCodePython: null,
+    starterCodeJava: null,
     testCases: [
       { id: "4a", input: "insert 1, 2, 3", expectedOutput: "1 -> 2 -> 3" },
     ],
@@ -117,6 +68,8 @@ export const questions: Question[] = [
     type: "edge-case",
     difficulty: "hard",
     starterCode: `function calculateAverage(numbers) {\n  let sum = 0;\n  for (let i = 0; i < numbers.length; i++) {\n    sum += numbers[i];\n  }\n  return sum / numbers.length;\n}\n\n// Fix this function to handle all edge cases`,
+    starterCodePython: `def calculate_average(numbers):\n    total = 0\n    for i in range(len(numbers)):\n        total += numbers[i]\n    return total / len(numbers)\n\n# Fix this function to handle all edge cases`,
+    starterCodeJava: `class Solution {\n    public static double calculateAverage(int[] numbers) {\n        int sum = 0;\n        for (int i = 0; i < numbers.length; i++) {\n            sum += numbers[i];\n        }\n        return (double) sum / numbers.length;\n    }\n}\n\n// Fix this method to handle all edge cases`,
     functionName: "calculateAverage",
     testCases: [
       { id: "5a", input: "[]", expectedOutput: "0" },
@@ -132,6 +85,8 @@ export const questions: Question[] = [
     type: "debugging",
     difficulty: "hard",
     starterCode: `function fibonacci(n) {\n  if (n == 0) return 1;\n  if (n == 1) return 1;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}`,
+    starterCodePython: `def fibonacci(n):\n    if n == 0:\n        return 1\n    if n == 1:\n        return 1\n    return fibonacci(n - 1) + fibonacci(n - 2)`,
+    starterCodeJava: `class Solution {\n    public static int fibonacci(int n) {\n        if (n == 0) return 1;\n        if (n == 1) return 1;\n        return fibonacci(n - 1) + fibonacci(n - 2);\n    }\n}`,
     functionName: "fibonacci",
     testCases: [
       { id: "6a", input: "0", expectedOutput: "0" },
@@ -146,6 +101,8 @@ export const questions: Question[] = [
     type: "dsa",
     difficulty: "easy",
     starterCode: `class Stack {\n  constructor() {\n    // Initialize\n  }\n\n  push(element) {\n    // Add element\n  }\n\n  pop() {\n    // Remove and return top\n  }\n\n  peek() {\n    // Return top without removing\n  }\n\n  isEmpty() {\n    // Check if empty\n  }\n}`,
+    starterCodePython: null,
+    starterCodeJava: null,
     testCases: [
       { id: "7a", input: "push(1), push(2), peek()", expectedOutput: "2" },
       { id: "7b", input: "push(1), pop(), isEmpty()", expectedOutput: "true" },
@@ -158,6 +115,8 @@ export const questions: Question[] = [
     type: "output-prediction",
     difficulty: "hard",
     starterCode: `function Animal(name) {\n  this.name = name;\n}\nAnimal.prototype.speak = function() {\n  return this.name + ' makes a sound';\n};\n\nfunction Dog(name) {\n  Animal.call(this, name);\n}\nDog.prototype = Object.create(Animal.prototype);\n\nconst dog = new Dog('Rex');\nconsole.log(dog.speak());\nconsole.log(dog instanceof Animal);\nconsole.log(dog.constructor === Dog);`,
+    starterCodePython: null,
+    starterCodeJava: null,
     testCases: [
       { id: "8a", input: "", expectedOutput: "Rex makes a sound\ntrue\nfalse" },
     ],
@@ -169,6 +128,8 @@ export const questions: Question[] = [
     type: "dsa",
     difficulty: "easy",
     starterCode: `function twoSum(nums, target) {\n  // Your code here\n  \n}`,
+    starterCodePython: `def two_sum(nums, target):\n    # Your code here\n    pass`,
+    starterCodeJava: `class Solution {\n    public static int[] twoSum(int[] nums, int target) {\n        // Your code here\n        return new int[]{};\n    }\n}`,
     functionName: "twoSum",
     testCases: [
       { id: "9a", input: "[2, 7, 11, 15], 9", expectedOutput: "[0, 1]" },
@@ -184,6 +145,8 @@ export const questions: Question[] = [
     type: "dsa",
     difficulty: "medium",
     starterCode: `function isValid(s) {\n  // Your code here\n  \n}`,
+    starterCodePython: `def is_valid(s):\n    # Your code here\n    pass`,
+    starterCodeJava: `class Solution {\n    public static boolean isValid(String s) {\n        // Your code here\n        return false;\n    }\n}`,
     functionName: "isValid",
     testCases: [
       { id: "10a", input: "\"()\"", expectedOutput: "true" },
@@ -199,6 +162,8 @@ export const questions: Question[] = [
     type: "debugging",
     difficulty: "easy",
     starterCode: `function isAnagram(s, t) {\n  let matched = 0;\n  for (let i = 0; i < s.length; i++) {\n    if (t.includes(s[i])) {\n      matched++;\n    }\n  }\n  return matched === s.length;\n}`,
+    starterCodePython: `def is_anagram(s, t):\n    matched = 0\n    for i in range(len(s)):\n        if s[i] in t:\n            matched += 1\n    return matched == len(s)`,
+    starterCodeJava: `class Solution {\n    public static boolean isAnagram(String s, String t) {\n        int matched = 0;\n        for (int i = 0; i < s.length(); i++) {\n            if (t.indexOf(s.charAt(i)) >= 0) {\n                matched++;\n            }\n        }\n        return matched == s.length();\n    }\n}`,
     functionName: "isAnagram",
     testCases: [
       { id: "11a", input: "\"anagram\", \"nagaram\"", expectedOutput: "true" },
@@ -214,9 +179,47 @@ export const questions: Question[] = [
     type: "output-prediction",
     difficulty: "hard",
     starterCode: `console.log('1');\n\nsetTimeout(() => {\n  console.log('2');\n}, 0);\n\nPromise.resolve().then(() => {\n  console.log('3');\n}).then(() => {\n  console.log('4');\n});\n\nconsole.log('5');\n\n// Write the output separated by newlines:`,
+    starterCodePython: null,
+    starterCodeJava: null,
     testCases: [
       { id: "12a", input: "", expectedOutput: "1\n5\n3\n4\n2" },
     ],
     hints: ["Synchronous code runs first.", "Microtasks (Promises) take priority over Macrotasks (setTimeout) in the event loop hook."]
   }
 ];
+
+async function seed() {
+  try {
+    console.log('Seeding Database...');
+    // Clear existing to avoid duplicates in seed
+    await db.query('DELETE FROM test_cases');
+    await db.query('DELETE FROM submissions');
+    await db.query('DELETE FROM questions');
+
+    for (const q of questions) {
+      await db.query(`
+                INSERT INTO questions (id, title, description, type, difficulty, starter_code, starter_code_python, starter_code_java, function_name, hints) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+        q.id, q.title, q.description, q.type, q.difficulty, q.starterCode,
+        q.starterCodePython || null, q.starterCodeJava || null,
+        q.functionName || null,
+        q.hints ? JSON.stringify(q.hints) : null
+      ]);
+
+      for (const t of q.testCases) {
+        await db.query(`
+                    INSERT INTO test_cases (id, question_id, input, expected_output) 
+                    VALUES (?, ?, ?, ?)
+                `, [t.id, q.id, t.input, t.expectedOutput]);
+      }
+    }
+    console.log('Database seeded successfully!');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error seeding database:', err);
+    process.exit(1);
+  }
+}
+
+seed();

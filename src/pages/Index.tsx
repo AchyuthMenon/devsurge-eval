@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Terminal, Code, Bug, Zap, Brain, Shield } from "lucide-react";
+import { Code, Bug, Zap, Brain, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 
 const features = [
@@ -23,8 +23,18 @@ const Index = () => {
         transition={{ duration: 0.6 }}
         className="text-center max-w-2xl"
       >
-        <div className="w-16 h-16 rounded-xl bg-primary/10 neon-border flex items-center justify-center mx-auto mb-6 neon-glow">
-          <Terminal className="w-8 h-8 text-primary" />
+        <div className="w-16 h-16 rounded bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6 shadow-neon">
+          <svg
+            viewBox="0 0 24 24"
+            className="w-10 h-10 text-primary"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="square"
+            strokeLinejoin="miter">
+            <path d="M19 5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19H19" />
+            <path d="M5 12H15" />
+          </svg>
         </div>
 
         <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">

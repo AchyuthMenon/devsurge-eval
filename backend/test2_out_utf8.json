@@ -1,0 +1,13 @@
+﻿{
+  "id": "c7aaad4f-e0a0-492a-b118-ee17dfb45ee1",
+  "userId": "3a616191-8e7c-4de7-ac0a-da6b57ca8377",
+  "questionId": "11",
+  "submittedCode": "function isAnagram(s, t) {\n  // If lengths differ, they can't be anagrams\n  if (s.length !== t.length) {\n    return false;\n  }\n  \n  const charCount = {};\n  \n  // Track frequency. +1 for elements in s, -1 for elements in t.\n  for (let i = 0; i < s.length; i++) {\n    charCount[s[i]] = (charCount[s[i]] || 0) + 1;\n    charCount[t[i]] = (charCount[t[i]] || 0) - 1;\n  }\n  \n  // If all characters perfectly cancel out, the map values will all be 0\n  for (let char in charCount) {\n    if (charCount[char] !== 0) {\n      return false;\n    }\n  }\n  \n  return true;\n}",
+  "output": "false\n",
+  "status": "accepted",
+  "errorType": null,
+  "executionTime": "1220ms",
+  "memoryUsed": "51.4MB",
+  "aiScore": 0.15,
+  "createdAt": "2026-03-07T06:40:56.125Z"
+}

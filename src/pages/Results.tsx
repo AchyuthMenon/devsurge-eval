@@ -1,9 +1,11 @@
 import { useAuth } from "@/context/AuthContext";
-import { useSubmissions } from "@/context/SubmissionContext";
-import { questions, questionTypeLabels, QuestionType } from "@/data/questions";
+import { useSubmissions, Submission } from "@/context/SubmissionContext";
+import { questionTypeLabels, QuestionType, Question } from "@/data/questions";
 import { Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const typeColors: Record<QuestionType, string> = {
   debugging: "#f87171",
@@ -17,9 +19,35 @@ const Results = () => {
   const { user } = useAuth();
   const { getUserSubmissions } = useSubmissions();
 
-  if (!user) return <Navigate to="/login" />;
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [subs, setSubs] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const subs = getUserSubmissions(user.id);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/questions");
+        if (res.ok) {
+          const data = await res.json();
+          setQuestions(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch questions");
+      }
+
+      if (user?.id) {
+        const userSubs = await getUserSubmissions(user.id);
+        setSubs(userSubs);
+      }
+      setLoading(false);
+    };
+
+    if (user?.id) fetchData();
+  }, [user]);
+
+  if (!user) return <Navigate to="/login" />;
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading results...</div>;
+
   const accepted = subs.filter((s) => s.status === "accepted");
   const uniqueSolved = new Set(accepted.map((s) => s.questionId)).size;
   const totalAttempts = subs.length;
@@ -31,11 +59,13 @@ const Results = () => {
     const solved = typeQuestions.filter((q) =>
       accepted.some((s) => s.questionId === q.id)
     ).length;
+    const total = typeQuestions.length;
     return {
       name: questionTypeLabels[type],
       type,
       solved,
-      total: typeQuestions.length,
+      total,
+      percentage: total > 0 ? Math.round((solved / total) * 100) : 0,
     };
   });
 
@@ -81,7 +111,7 @@ const Results = () => {
             <BarChart data={typeData}>
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(215 12% 50%)" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "hsl(215 12% 50%)" }} axisLine={false} tickLine={false} />
-              <Tooltip
+              <RechartsTooltip
                 contentStyle={{
                   backgroundColor: "hsl(220 18% 10%)",
                   border: "1px solid hsl(220 14% 18%)",
@@ -99,6 +129,57 @@ const Results = () => {
                 ))}
               </Bar>
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </motion.div>
+
+      {/* Skill Heatmap */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="rounded-lg border border-border bg-card p-6 mb-8"
+      >
+        <h2 className="font-display font-semibold mb-6 flex items-center justify-between">
+          <span>Skill Distribution</span>
+        </h2>
+
+        <div className="h-80 relative flex justify-center items-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart cx="50%" cy="50%" outerRadius="75%" data={typeData}>
+              <PolarGrid stroke="hsl(215 12% 20%)" strokeWidth={1} />
+              <PolarAngleAxis
+                dataKey="name"
+                tick={{ fill: "hsl(215 12% 70%)", fontSize: 12, fontWeight: 500 }}
+              />
+              <PolarRadiusAxis
+                angle={90}
+                domain={[0, 100]}
+                tick={false}
+                axisLine={false}
+              />
+              <Radar
+                name="Proficiency"
+                dataKey="percentage"
+                stroke="hsl(215, 100%, 70%)"
+                strokeWidth={2}
+                fill="hsl(215, 100%, 70%)"
+                fillOpacity={0.4}
+              />
+              <RechartsTooltip
+                contentStyle={{
+                  backgroundColor: "hsl(220 18% 10%)",
+                  border: "1px solid hsl(220 14% 18%)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                formatter={(value: any, name: string, props: any) => [
+                  `${props.payload.solved} / ${props.payload.total} Solved`,
+                  "Proficiency"
+                ]}
+                labelFormatter={(label) => label}
+              />
+            </RadarChart>
           </ResponsiveContainer>
         </div>
       </motion.div>

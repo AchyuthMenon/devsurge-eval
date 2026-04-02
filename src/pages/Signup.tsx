@@ -14,11 +14,13 @@ const Signup = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signup(name, email, password)) {
+    if (await signup(name, email, password)) {
       toast.success("Account created!");
       navigate("/questions");
+    } else {
+      toast.error("Account creation failed");
     }
   };
 
@@ -26,8 +28,18 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-lg bg-primary/20 neon-border flex items-center justify-center mx-auto mb-4">
-            <Terminal className="w-6 h-6 text-primary" />
+          <div className="w-12 h-12 rounded bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+            <svg
+              viewBox="0 0 24 24"
+              className="w-7 h-7 text-primary"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="square"
+              strokeLinejoin="miter">
+              <path d="M19 5H7C5.89543 5 5 5.89543 5 7V17C5 18.1046 5.89543 19 7 19H19" />
+              <path d="M5 12H15" />
+            </svg>
           </div>
           <h1 className="text-2xl font-display font-bold gradient-text">Create account</h1>
           <p className="text-muted-foreground text-sm mt-1">Start building your skills today</p>

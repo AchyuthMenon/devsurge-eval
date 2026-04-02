@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { questions, questionTypeLabels, QuestionType } from "@/data/questions";
+import { useState, useEffect } from "react";
+import { questionTypeLabels, QuestionType, Question } from "@/data/questions";
 import { useAuth } from "@/context/AuthContext";
 import { useSubmissions } from "@/context/SubmissionContext";
 import QuestionCard from "@/components/QuestionCard";
@@ -10,14 +10,34 @@ const types: (QuestionType | "all")[] = ["all", "debugging", "dsa", "output-pred
 
 const Questions = () => {
   const [filter, setFilter] = useState<QuestionType | "all">("all");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
+
   const { user } = useAuth();
   const { getUserSubmissions } = useSubmissions();
 
-  const solvedIds = new Set(
-    getUserSubmissions(user?.id || "")
-      .filter((s) => s.status === "accepted")
-      .map((s) => s.questionId)
-  );
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/questions");
+        if (res.ok) {
+          const data = await res.json();
+          setQuestions(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch questions");
+      }
+
+      if (user?.id) {
+        const subs = await getUserSubmissions(user.id);
+        const solved = new Set(
+          subs.filter((s) => s.status === "accepted").map((s) => s.questionId)
+        );
+        setSolvedIds(solved);
+      }
+    };
+    fetchData();
+  }, [user]);
 
   const filtered = filter === "all" ? questions : questions.filter((q) => q.type === filter);
 

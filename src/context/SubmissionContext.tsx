@@ -5,18 +5,21 @@ export interface Submission {
   userId: string;
   questionId: string;
   submittedCode: string;
+  language: string;
   output: string;
   status: "accepted" | "wrong_answer" | "error";
+  errorType?: string;
   executionTime: string;
   memoryUsed: string;
+  aiScore?: number | null;
   createdAt: string;
 }
 
 interface SubmissionContextType {
   submissions: Submission[];
-  addSubmission: (sub: Omit<Submission, "id" | "createdAt">) => Submission;
-  getUserSubmissions: (userId: string) => Submission[];
-  getQuestionSubmissions: (userId: string, questionId: string) => Submission[];
+  addSubmission: (sub: Omit<Submission, "id" | "createdAt" | "status" | "output" | "executionTime" | "memoryUsed" | "aiScore" | "errorType">) => Promise<Submission | null>;
+  getUserSubmissions: (userId: string) => Promise<Submission[]>;
+  getQuestionSubmissions: (userId: string, questionId: string) => Promise<Submission[]>;
 }
 
 const SubmissionContext = createContext<SubmissionContextType | null>(null);
@@ -31,31 +34,50 @@ export const SubmissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [submissions, setSubmissions] = useState<Submission[]>([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("sdep_submissions");
-    if (stored) setSubmissions(JSON.parse(stored));
+    // Optionally fetch all on mount, but we will rely on contextual fetching
   }, []);
 
-  const save = (subs: Submission[]) => {
-    localStorage.setItem("sdep_submissions", JSON.stringify(subs));
-    setSubmissions(subs);
+  const addSubmission = async (sub: Omit<Submission, "id" | "createdAt" | "status" | "output" | "executionTime" | "memoryUsed" | "aiScore" | "errorType">): Promise<Submission | null> => {
+    try {
+      const res = await fetch("http://localhost:5000/api/submissions/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub),
+      });
+      if (res.ok) {
+        const newSub = await res.json();
+        setSubmissions((prev) => [...prev, newSub]);
+        return newSub;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   };
 
-  const addSubmission = (sub: Omit<Submission, "id" | "createdAt">) => {
-    const newSub: Submission = {
-      ...sub,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [...submissions, newSub];
-    save(updated);
-    return newSub;
+  const getUserSubmissions = async (userId: string): Promise<Submission[]> => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/submissions/user/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSubmissions(data);
+        return data;
+      }
+      return [];
+    } catch {
+      return [];
+    }
   };
 
-  const getUserSubmissions = (userId: string) =>
-    submissions.filter((s) => s.userId === userId);
-
-  const getQuestionSubmissions = (userId: string, questionId: string) =>
-    submissions.filter((s) => s.userId === userId && s.questionId === questionId);
+  const getQuestionSubmissions = async (userId: string, questionId: string): Promise<Submission[]> => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/submissions/user/${userId}/question/${questionId}`);
+      if (res.ok) return await res.json();
+      return [];
+    } catch {
+      return [];
+    }
+  };
 
   return (
     <SubmissionContext.Provider value={{ submissions, addSubmission, getUserSubmissions, getQuestionSubmissions }}>
